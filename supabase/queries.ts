@@ -1,0 +1,42 @@
+import { SupabaseClient } from "@supabase/supabase-js";
+import { cache } from "react";
+
+export const getPurchases = cache(async (supabase: SupabaseClient) => {
+  const { data } = await supabase
+    .from("purchase")
+    .select("id, date")
+    .order("date", { ascending: false });
+  return data;
+});
+
+export const getPurchaseItems = cache(
+  async (supabase: SupabaseClient, id: number) => {
+    const { data, error } = await supabase
+      .from("purchase_item")
+      .select("*")
+      .eq("purchase_id", id);
+
+    if (error) {
+      console.error("Error fetching purchase items:", error);
+      return null;
+    }
+
+    return data;
+  }
+);
+
+export const getPurchaseSummary = cache(
+  async (supabase: SupabaseClient, startDate: string, endDate: string) => {
+    const { data, error } = await supabase.rpc("get_purchase_overview", {
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    if (error) {
+      console.error("Error fetching purchase overview:", error);
+      return null;
+    }
+
+    return data;
+  }
+);
