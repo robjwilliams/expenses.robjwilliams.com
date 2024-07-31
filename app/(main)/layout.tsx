@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { Inter } from "next/font/google";
-import "./globals.css";
+import "../globals.css";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,7 +9,11 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-import { siteConfig } from "./siteConfig";
+import { Sidebar } from "@/components/ui/navigation/sidebar";
+// import { siteConfig } from "./siteConfig";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
+import { siteConfig } from "../siteConfig";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://yoururl.com"),
@@ -46,6 +50,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const supabase = createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return redirect("/login");
+  }
+
   return (
     <html lang="en">
       <body
@@ -54,7 +68,10 @@ export default async function RootLayout({
       >
         <div className="max-w-screen">
           <ThemeProvider defaultTheme="system" attribute="class">
-            <main className="flex items-center h-screen">{children}</main>
+            {user && <Sidebar />}
+            <main className={`${user ? "lg:pl-72" : ""} w-full h-screen`}>
+              <div className="p-10">{children}</div>
+            </main>
           </ThemeProvider>
         </div>
       </body>
