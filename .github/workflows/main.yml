@@ -23,14 +23,8 @@ jobs:
         working-directory: scripts/carrefour
         run: npm ci
 
-      - name: Install packages
-        working-directory: scripts/carrefour
-        run: npm install
-
       - name: Run Puppeteer Script
-        uses: tj-actions/puppeteer@v5
-        id: puppeteer-test
-        with:
-          files: scripts/carrefour/bot.js
+        working-directory: scripts/carrefour
+        run: node bot.js
         env:
-          API_ENDPOINT: ${{ secrets.API_ENDPOINT }} # Ensure the script has access to the environment variable
+          API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
