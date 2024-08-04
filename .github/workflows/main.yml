@@ -1,0 +1,34 @@
+name: Scrape and Upload
+
+on:
+  workflow_dispatch:
+
+jobs:
+  carrefour-bot:
+    name: Test puppeteer
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - name: Install packages
+        working-directory: scripts/carrefour
+        run: npm install
+
+      - name: Test action
+        uses: tj-actions/puppeteer@v5
+        id: puppeteer-test
+        with:
+          files: scripts/carrefour/bot.js
+
+      - name: Copy test output
+        uses: tj-actions/docker-cp@v2
+        with:
+          container: ${{ steps.puppeteer-test.outputs.container-id }}
+          source: ${{ steps.puppeteer-test.outputs.home }}/test.pdf # <-- Replace this input if copied or Remove this step
+          destination: test.pdf # <-- Replace this input if copied or Remove this step
+
+      - name: Display contents of test.pdf # <-- Replace this file name if copied or Remove this step
+        run: cat test.pdf # <-- Replace this file name if copied or Remove this step
+
+        
