@@ -1,35 +1,49 @@
 import fs from "fs";
 import path from "path";
 import os from "os";
-const { PDFDocument } = "pdf-lib";
+import { getDocument } from "pdfjs-dist";
 
 const FILES_PATH = path.join(os.tmpdir(), "tmp"); // Change this to your path
 
 async function extractTextFromPDF(pdfPath) {
-  let text = "";
   try {
-    const pdfBytes = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const pages = pdfDoc.getPages();
-
-    for (const page of pages) {
-      text += page
-        .getTextContent()
-        .items.map((item) => item.str)
-        .join(" ");
-    }
-  } catch (error) {
-    console.error(`Error opening ${pdfPath}: ${error.message}`);
+    const loadingTask = getDocument(pdfPath);
+    const pdfDocument = await loadingTask.promise;
+    const textObjects = await extractTextObjectsFromDocument(pdfDocument);
+    return textObjects;
+  } catch (err) {
+    console.error(`Error opening ${pdfPath}: ${err}`);
+    return [];
   }
-  return text;
 }
 
-function parseReceiptText(text) {
-  const dateMatch = text.match(/Fecha (\d{2}\/\d{2}\/\d{2})/);
-  const date = dateMatch ? dateMatch[1] : "Date not found";
+async function extractTextObjectsFromDocument(pdfDocument) {
+  const textObjects = [];
+  const numPages = pdfDocument.numPages;
 
-  const totalMatch = text.match(/TOTAL\s*\$([\d,.]+)/);
-  const total = totalMatch ? totalMatch[1] : "Total not found";
+  for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    const page = await pdfDocument.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    textObjects.push(...textContent.items);
+  }
+
+  return textObjects;
+}
+
+function parseReceiptText(textObjects) {
+  const dateMatch = textObjects.find((item) =>
+    /Fecha \d{2}\/\d{2}\/\d{2}/.test(item.str)
+  );
+  const date = dateMatch
+    ? dateMatch.str.match(/(\d{2}\/\d{2}\/\d{2})/)[1]
+    : "Date not found";
+
+  const totalMatch = textObjects.find((item) =>
+    /TOTAL\s*\$[\d,.]+/.test(item.str)
+  );
+  const total = totalMatch
+    ? totalMatch.str.match(/TOTAL\s*\$([\d,.]+)/)[1]
+    : "Total not found";
 
   const items = [];
   const categories = {
@@ -47,9 +61,10 @@ function parseReceiptText(text) {
 
   let currentCategory = null;
   let currentProduct = {};
-  const itemLines = text.split("\n");
 
-  for (const line of itemLines) {
+  for (const item of textObjects) {
+    const line = item.str;
+
     if (line.trim() === "DESCUENTOS") {
       break;
     }
@@ -111,16 +126,24 @@ async function processReceipts() {
   const files = fs
     .readdirSync(FILES_PATH)
     .filter((file) => file.toLowerCase().endsWith(".pdf"));
+
   for (const file of files) {
     const filePath = path.join(FILES_PATH, file);
-    const text = await extractTextFromPDF(filePath);
-    const date = file.split(".pdf")[0];
-    const purchase = {
-      date,
-      items: parseReceiptText(text),
-    };
-    console.log(purchase);
-    response.push(purchase);
+    try {
+      if (fs.existsSync(filePath)) {
+        const textObjects = await extractTextFromPDF(filePath);
+        const date = file.split(".pdf")[0];
+        const purchase = {
+          date,
+          items: parseReceiptText(textObjects),
+        };
+        response.push(purchase);
+      } else {
+        console.error(`File does not exist: ${filePath}`);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }
   console.log(JSON.stringify(response, null, 2));
 }
