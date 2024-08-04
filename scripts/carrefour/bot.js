@@ -1,6 +1,6 @@
-import puppeteer from "puppeteer";
-import fs from "fs";
-import path from "path";
+const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 // import { createClient } from "@/utils/supabase/server";
 
 const downloadDir = path.join(
