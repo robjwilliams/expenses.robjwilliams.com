@@ -7,6 +7,9 @@ jobs:
   carrefour-bot:
     name: Test puppeteer
     runs-on: ubuntu-latest
+    env:
+      API_ENDPOINT: "${{ secrets.API_ENDPOINT }}" # Set the environment variable for the job
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4.1.7
@@ -15,8 +18,10 @@ jobs:
         working-directory: scripts/carrefour
         run: npm install
 
-      - name: Test action
+      - name: Run Puppeteer Script
         uses: tj-actions/puppeteer@v5
         id: puppeteer-test
         with:
           files: scripts/carrefour/bot.js
+        env:
+          API_ENDPOINT: ${{ secrets.API_ENDPOINT }} # Ensure the script has access to the environment variable

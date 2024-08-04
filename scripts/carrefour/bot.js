@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-// import { createClient } from "@/utils/supabase/server";
+const axios = require("axios");
 
 const downloadDir = path.join(os.tmpdir());
 
@@ -51,7 +51,7 @@ const login = async (page) => {
     console.log("Submitting login form...");
     await page.waitForSelector('#login-form button[type="submit"]', {
       visible: true,
-      timeout: 20000, // Increase timeout to 20 seconds
+      timeout: 20000,
     });
     await page.locator('#login-form button[type="submit"]').click();
 
@@ -76,11 +76,39 @@ const toUnixTimestamp = (dateStr, dateFormat = "%d/%m/%Y %H:%M:%S") => {
   return Math.floor(new Date(dateStr).getTime() / 1000);
 };
 
-const processBillingItems = async (page, downloadDir) => {
-  // const supabase = createClient();
+const fetchLatestPurchaseDate = async () => {
+  try {
+    const {
+      data: { date },
+    } = await axios.get(`${process.env.API_ENDPOINT}/latest_purchase`);
+    const dateObject = new Date(date);
 
-  const gtDateStr = "25/07/2024 00:00:00";
-  const ltDateStr = "31/07/2024 23:59:59";
+    const pad = (num) => num.toString().padStart(2, "0");
+
+    // Format: dd/mm/yyyy hh:mm:ss
+    const formattedDate =
+      [
+        pad(dateObject.getDate()), // Day
+        pad(dateObject.getMonth() + 1), // Month (0-based, so add 1)
+        dateObject.getFullYear(), // Year
+      ].join("/") +
+      " " +
+      [
+        pad(dateObject.getHours()), // Hours
+        pad(dateObject.getMinutes()), // Minutes
+        pad(dateObject.getSeconds()), // Seconds
+      ].join(":");
+    return formattedDate;
+  } catch (error) {
+    console.error("Error fetching latest purchase date:", error);
+    return null;
+  }
+};
+
+const processBillingItems = async (page, downloadDir) => {
+  const latestPurchaseDate = await fetchLatestPurchaseDate();
+
+  const gtDateStr = latestPurchaseDate;
 
   const toUnixTimestamp = (dateStr) => {
     const [day, month, year, hour, minute, second] = dateStr
@@ -90,14 +118,12 @@ const processBillingItems = async (page, downloadDir) => {
   };
 
   const gtTimestamp = gtDateStr ? toUnixTimestamp(gtDateStr) : null;
-  const ltTimestamp = ltDateStr ? toUnixTimestamp(ltDateStr) : null;
 
   console.log("gtTimestamp:", gtTimestamp);
-  console.log("ltTimestamp:", ltTimestamp);
 
   const rows = await page.$$eval(
     "#consumos-lista tbody tr",
-    (trs, gtTimestamp, ltTimestamp) => {
+    (trs, gtTimestamp) => {
       const toUnixTimestamp = (dateStr) => {
         const [day, month, year, hour, minute, second] = dateStr
           .split(/[:/ ]/)
@@ -109,18 +135,14 @@ const processBillingItems = async (page, downloadDir) => {
         .filter((tr) => {
           const dateText = tr.querySelector("td:nth-child(1)")?.innerText;
           const rowTimestamp = toUnixTimestamp(dateText);
-          return (
-            (!gtTimestamp || rowTimestamp > gtTimestamp) &&
-            (!ltTimestamp || rowTimestamp < ltTimestamp)
-          );
+          return !gtTimestamp || rowTimestamp > gtTimestamp;
         })
         .map((tr) => ({
           dateText: tr.querySelector("td:nth-child(1)")?.innerText,
           downloadButtonSelector: "td.right-align button",
         }));
     },
-    gtTimestamp,
-    ltTimestamp
+    gtTimestamp
   );
 
   const tmpDir = path.join(os.tmpdir(), "tmp");
@@ -139,12 +161,20 @@ const processBillingItems = async (page, downloadDir) => {
 
     console.log("Parsed Date Object:", dateObject);
 
-    const newFileName = `${dateObject.getDate()}${(dateObject.getMonth() + 1)
+    const newFileName = `${dateObject.getDate().toString().padStart(2, "0")}${(
+      dateObject.getMonth() + 1
+    )
       .toString()
-      .padStart(
-        2,
-        "0"
-      )}${dateObject.getFullYear()}_${dateObject.getHours()}${dateObject.getMinutes()}${dateObject.getSeconds()}.pdf`;
+      .padStart(2, "0")}${dateObject.getFullYear()}_${dateObject
+      .getHours()
+      .toString()
+      .padStart(2, "0")}${dateObject
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}${dateObject
+      .getSeconds()
+      .toString()
+      .padStart(2, "0")}.pdf`;
     console.log("New file name:", newFileName);
 
     const button = await page.$(downloadButtonSelector);
@@ -170,22 +200,9 @@ const processBillingItems = async (page, downloadDir) => {
 
           const oldPath = path.join(downloadDir, latestFile);
           const newPath = path.join(tmpDir, newFileName);
-
           fs.renameSync(oldPath, newPath);
           console.log("Renamed file:", latestFile, "to", newFileName);
-
-          const fileContent = fs.readFileSync(newPath);
-          // const { data, error } = await supabase.storage
-          //   .from("purchases")
-          //   .upload(newFileName, fileContent);
-
-          // if (error) {
-          //   console.log("Error uploading file:", error.message);
-          // } else {
-          //   console.log("File uploaded successfully:", data);
-          // }
-
-          fs.unlinkSync(newPath);
+          // fs.unlinkSync(newPath);
         } else {
           console.log("No PDF files found in download directory.");
         }
@@ -199,7 +216,13 @@ const processBillingItems = async (page, downloadDir) => {
       console.log("Download button not found for row:", dateText);
     }
   }
-
+  if (fs.existsSync(tmpDir)) {
+    // Read the contents of the directory
+    const files = fs.readdirSync(tmpDir);
+    console.log("Contents of the temporary directory:", files);
+  } else {
+    console.log("Directory does not exist:", tmpDir);
+  }
   // fs.rmdirSync(tmpDir, { recursive: true });
   console.log("Processing complete.");
 };
