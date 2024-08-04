@@ -31,6 +31,6 @@ jobs:
         uses: tj-actions/puppeteer@v5
         id: puppeteer-test
         with:
-          files: scripts/carrefour/bot.js
+          files: scripts/carrefour/**/*
         env:
           API_ENDPOINT: ${{ secrets.API_ENDPOINT }} # Ensure the script has access to the environment variable
