@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const axios = require("axios");
+const fetch = require("node-fetch");
 
 const downloadDir = path.join(os.tmpdir());
 
@@ -229,9 +230,11 @@ const processBillingItems = async (page, downloadDir) => {
 
 (async () => {
   const { browser, page } = await startBrowser();
-  await login(page);
-  await navigateToBilling(page);
-  await navigateToBilling(page);
-  await processBillingItems(page, downloadDir);
+  const resp = await fetchData(`${process.env.API_ENDPOINT}/latest_purchase`);
+  console.log(resp);
+  // await login(page);
+  // await navigateToBilling(page);
+  // await navigateToBilling(page);
+  // await processBillingItems(page, downloadDir);
   await browser.close();
 })();
