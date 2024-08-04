@@ -28,3 +28,7 @@ jobs:
         run: node bot.js
         env:
           API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
+
+      - name: Process Downloaded PDFs
+        working-directory: scripts/carrefour
+        run: node processPdfs.js
