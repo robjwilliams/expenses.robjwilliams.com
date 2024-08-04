@@ -1,30 +1,21 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 // import { createClient } from "@/utils/supabase/server";
 
-const downloadDir = path.join(
-  process.env.HOME || "",
-  "rob/finances/receipts/carrefour/"
-);
-
-// const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const downloadDir = path.join(os.tmpdir(), "downloads");
 
 const startBrowser = async () => {
   const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      // "ignoreHTTPSErrors",
-      // "--single-process",
-      // "--disable-setuid-sandbox",
-      "--no-sandbox",
-      // "--disable-dev-shm-usage",
-    ],
-    // executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
-    // devtools: false,
-    // dumpio: true,
+    headless: "new",
+    args: ["--no-sandbox"],
   });
   const page = await browser.newPage();
+  await page._client().send("Page.setDownloadBehavior", {
+    behavior: "allow",
+    downloadPath: downloadDir,
+  });
   page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
   page.on("error", (err) => console.error("PAGE ERROR:", err));
   page.on("pageerror", (pageErr) => console.error("PAGE ERROR:", pageErr));
@@ -42,8 +33,6 @@ const login = async (page) => {
 
     console.log("Clicking on the login button...");
     await page.locator(".ingresar_acceder_hogar").click();
-
-    // await delay(20000);
 
     console.log("Taking screenshot before login button click...");
     await page.screenshot({ path: "before_login_button_click.png" });
@@ -134,10 +123,7 @@ const processBillingItems = async (page, downloadDir) => {
     ltTimestamp
   );
 
-  const tmpDir = path.join(downloadDir, "tmp");
-  if (!fs.existsSync(tmpDir)) {
-    fs.mkdirSync(tmpDir);
-  }
+  const tmpDir = path.join(os.tmpdir(), "tmp");
 
   for (const { dateText, downloadButtonSelector } of rows) {
     console.log("Processing row with date:", dateText);
@@ -195,7 +181,7 @@ const processBillingItems = async (page, downloadDir) => {
           //   console.log("File uploaded successfully:", data);
           // }
 
-          // fs.unlinkSync(newPath);
+          fs.unlinkSync(newPath);
         } else {
           console.log("No PDF files found in download directory.");
         }
@@ -220,6 +206,5 @@ const processBillingItems = async (page, downloadDir) => {
   await navigateToBilling(page);
   await navigateToBilling(page);
   await processBillingItems(page, downloadDir);
-
   await browser.close();
 })();
