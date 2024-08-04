@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 
-// Ensure this path matches the one set in the workflow
 const downloadDir = path.join(os.tmpdir(), "tmp");
 
 fs.readdir(downloadDir, (err, files) => {
