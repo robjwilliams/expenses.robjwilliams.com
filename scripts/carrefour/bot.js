@@ -1,9 +1,8 @@
-const puppeteer = require("puppeteer");
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
-const axios = require("axios");
-const fetch = require("node-fetch");
+import { puppeteer } from "puppeteer";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import axios from "axios";
 
 const downloadDir = path.join(os.tmpdir());
 
@@ -230,11 +229,9 @@ const processBillingItems = async (page, downloadDir) => {
 
 (async () => {
   const { browser, page } = await startBrowser();
-  const resp = await fetchData(`${process.env.API_ENDPOINT}/latest_purchase`);
-  console.log(resp);
-  // await login(page);
-  // await navigateToBilling(page);
-  // await navigateToBilling(page);
-  // await processBillingItems(page, downloadDir);
+  await login(page);
+  await navigateToBilling(page);
+  await navigateToBilling(page);
+  await processBillingItems(page, downloadDir);
   await browser.close();
 })();
