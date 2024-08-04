@@ -14,6 +14,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4.1.7
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "latest"
+
+      - name: Install packages
+        working-directory: scripts/carrefour
+        run: npm ci
+
       - name: Install packages
         working-directory: scripts/carrefour
         run: npm install
