@@ -4,7 +4,7 @@ const path = require("path");
 const os = require("os");
 // import { createClient } from "@/utils/supabase/server";
 
-const downloadDir = path.join(os.tmpdir(), "downloads");
+const downloadDir = path.join(os.tmpdir());
 
 const startBrowser = async () => {
   const browser = await puppeteer.launch({
@@ -124,6 +124,10 @@ const processBillingItems = async (page, downloadDir) => {
   );
 
   const tmpDir = path.join(os.tmpdir(), "tmp");
+
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir, { recursive: true });
+  }
 
   for (const { dateText, downloadButtonSelector } of rows) {
     console.log("Processing row with date:", dateText);
