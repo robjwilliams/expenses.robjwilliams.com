@@ -32,3 +32,5 @@ jobs:
       - name: Process Downloaded PDFs
         working-directory: scripts/carrefour
         run: node processPdfs.js
+        env:
+          API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
