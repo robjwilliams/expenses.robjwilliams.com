@@ -148,7 +148,8 @@ async function processReceipts() {
   console.log(JSON.stringify(body, null, 2));
   const { data, error } = await axios.post(
     `${process.env.API_ENDPOINT}/receipts`,
-    body
+    body,
+    { timeout: 30000 }
   );
   console.log(data, error);
 }
