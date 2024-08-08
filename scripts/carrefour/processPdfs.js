@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { getDocument } from "pdfjs-dist";
+import axios from "axios";
 
 const FILES_PATH = path.join(os.tmpdir(), "tmp"); // Change this to your path
 
@@ -45,7 +46,6 @@ function parseReceiptText(textObjects) {
     ? totalMatch.str.match(/TOTAL\s*\$([\d,.]+)/)[1]
     : "Total not found";
 
-  const items = [];
   const categories = {
     Mascotas: [],
     Almacen: [],
@@ -118,11 +118,11 @@ function parseReceiptText(textObjects) {
     }
   }
 
-  return { date, total, items: categories };
+  return { ...categories };
 }
 
 async function processReceipts() {
-  const response = [];
+  const body = [];
   const files = fs
     .readdirSync(FILES_PATH)
     .filter((file) => file.toLowerCase().endsWith(".pdf"));
@@ -135,9 +135,9 @@ async function processReceipts() {
         const date = file.split(".pdf")[0];
         const purchase = {
           date,
-          items: parseReceiptText(textObjects),
+          categories: parseReceiptText(textObjects),
         };
-        response.push(purchase);
+        body.push(purchase);
       } else {
         console.error(`File does not exist: ${filePath}`);
       }
@@ -145,7 +145,12 @@ async function processReceipts() {
       console.error(err);
     }
   }
-  console.log(JSON.stringify(response, null, 2));
+  console.log(JSON.stringify(body, null, 2));
+  const { data, error } = await axios.post(
+    `${process.env.API_ENDPOINT}/receipts`,
+    body
+  );
+  console.log(data, error);
 }
 
 processReceipts();

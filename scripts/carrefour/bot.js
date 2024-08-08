@@ -66,14 +66,14 @@ const login = async (page) => {
 
 const navigateToBilling = async (page) => {
   console.log("Waiting for 'Mis Consumos' element to be visible...");
-
+  await page.waitForSelector('li[class*="consumos"]', {
+    visible: true,
+    timeout: 60000,
+  });
   await page.locator('li[class*="consumos"]').click();
 
   console.log("Waiting for navigation...");
   await page.waitForNavigation({ waitUntil: "networkidle0" });
-};
-const toUnixTimestamp = (dateStr, dateFormat = "%d/%m/%Y %H:%M:%S") => {
-  return Math.floor(new Date(dateStr).getTime() / 1000);
 };
 
 const fetchLatestPurchaseDate = async () => {
@@ -87,17 +87,12 @@ const fetchLatestPurchaseDate = async () => {
 
     // Format: dd/mm/yyyy hh:mm:ss
     const formattedDate =
-      [
-        pad(dateObject.getDate()), // Day
-        pad(dateObject.getMonth() + 1), // Month (0-based, so add 1)
-        dateObject.getFullYear(), // Year
-      ].join("/") +
-      " " +
-      [
-        pad(dateObject.getHours()), // Hours
-        pad(dateObject.getMinutes()), // Minutes
-        pad(dateObject.getSeconds()), // Seconds
-      ].join(":");
+      `${pad(dateObject.getDate())}/${pad(
+        dateObject.getMonth() + 1
+      )}/${dateObject.getFullYear()} ` +
+      `${pad(dateObject.getHours())}:${pad(dateObject.getMinutes())}:${pad(
+        dateObject.getSeconds()
+      )}`;
     return formattedDate;
   } catch (error) {
     console.error("Error fetching latest purchase date:", error);
@@ -108,8 +103,6 @@ const fetchLatestPurchaseDate = async () => {
 const processBillingItems = async (page, downloadDir) => {
   const latestPurchaseDate = await fetchLatestPurchaseDate();
 
-  const gtDateStr = latestPurchaseDate;
-
   const toUnixTimestamp = (dateStr) => {
     const [day, month, year, hour, minute, second] = dateStr
       .split(/[:/ ]/)
@@ -117,11 +110,17 @@ const processBillingItems = async (page, downloadDir) => {
     return new Date(year, month - 1, day, hour, minute, second).getTime();
   };
 
-  const gtTimestamp = gtDateStr ? toUnixTimestamp(gtDateStr) : null;
-
+  const gtTimestamp = latestPurchaseDate
+    ? toUnixTimestamp(latestPurchaseDate)
+    : null;
   console.log("gtTimestamp:", gtTimestamp);
 
-  const rows = await page.$$eval(
+  const tmpDir = path.join(os.tmpdir(), "tmp");
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir, { recursive: true });
+  }
+
+  const rowsWithPositions = await page.$$eval(
     "#consumos-lista tbody tr",
     (trs, gtTimestamp) => {
       const toUnixTimestamp = (dateStr) => {
@@ -132,35 +131,31 @@ const processBillingItems = async (page, downloadDir) => {
       };
 
       return trs
-        .filter((tr) => {
+        .map((tr, index) => {
           const dateText = tr.querySelector("td:nth-child(1)")?.innerText;
           const rowTimestamp = toUnixTimestamp(dateText);
-          return !gtTimestamp || rowTimestamp > gtTimestamp;
+          return { index, rowTimestamp, dateText };
         })
-        .map((tr) => ({
-          dateText: tr.querySelector("td:nth-child(1)")?.innerText,
-          downloadButtonSelector: "td.right-align button",
-        }));
+        .filter(
+          ({ rowTimestamp }) => !gtTimestamp || rowTimestamp > gtTimestamp
+        );
     },
     gtTimestamp
   );
 
-  const tmpDir = path.join(os.tmpdir(), "tmp");
+  for (const { index, dateText } of rowsWithPositions) {
+    const rowSelector = `tbody tr:nth-child(${index + 1})`;
 
-  if (!fs.existsSync(tmpDir)) {
-    fs.mkdirSync(tmpDir, { recursive: true });
-  }
+    // Select the row element
+    const row = await page.$(rowSelector);
 
-  for (const { dateText, downloadButtonSelector } of rows) {
     console.log("Processing row with date:", dateText);
 
+    // Define file name
     const [day, month, year, hour, minute, second] = dateText
       .split(/[:/ ]/)
       .map(Number);
     const dateObject = new Date(year, month - 1, day, hour, minute, second);
-
-    console.log("Parsed Date Object:", dateObject);
-
     const newFileName = `${dateObject.getDate().toString().padStart(2, "0")}${(
       dateObject.getMonth() + 1
     )
@@ -175,14 +170,21 @@ const processBillingItems = async (page, downloadDir) => {
       .getSeconds()
       .toString()
       .padStart(2, "0")}.pdf`;
+
     console.log("New file name:", newFileName);
 
-    const button = await page.$(downloadButtonSelector);
+    // Select the button within the row
+    const button = await row.$("td button");
+
     if (button) {
       await button.click();
       await page.waitForSelector("#simplemodal-container", { visible: true });
+      await page.waitForSelector(
+        "#simplemodal-container .download-container button",
+        { visible: true }
+      );
 
-      const downloadButton = await page.locator(".download-container button");
+      const downloadButton = await page.$(".download-container button");
       if (downloadButton) {
         console.log("Download button found, clicking...");
         await downloadButton.click();
@@ -202,7 +204,6 @@ const processBillingItems = async (page, downloadDir) => {
           const newPath = path.join(tmpDir, newFileName);
           fs.renameSync(oldPath, newPath);
           console.log("Renamed file:", latestFile, "to", newFileName);
-          // fs.unlinkSync(newPath);
         } else {
           console.log("No PDF files found in download directory.");
         }
@@ -213,24 +214,23 @@ const processBillingItems = async (page, downloadDir) => {
       await page.keyboard.press("Escape");
       await page.waitForSelector("#simplemodal-container", { hidden: true });
     } else {
-      console.log("Download button not found for row:", dateText);
+      console.log("Modal button not found for row:", dateText);
     }
   }
+
   if (fs.existsSync(tmpDir)) {
-    // Read the contents of the directory
     const files = fs.readdirSync(tmpDir);
     console.log("Contents of the temporary directory:", files);
   } else {
     console.log("Directory does not exist:", tmpDir);
   }
-  // fs.rmdirSync(tmpDir, { recursive: true });
+
   console.log("Processing complete.");
 };
 
 (async () => {
   const { browser, page } = await startBrowser();
   await login(page);
-  await navigateToBilling(page);
   await navigateToBilling(page);
   await processBillingItems(page, downloadDir);
   await browser.close();
