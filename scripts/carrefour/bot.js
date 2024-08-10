@@ -34,19 +34,13 @@ const login = async (page) => {
     console.log("Clicking on the login button...");
     await page.locator(".ingresar_acceder_hogar").click();
 
-    console.log("Taking screenshot before login button click...");
-    await page.screenshot({ path: "before_login_button_click.png" });
-
-    console.log("Waiting for email input to be visible...");
+    console.log("Waiting for email input to be visible...", process.env.EMAIL);
     await page.waitForSelector("#email", { visible: true, timeout: 60000 }); // Increase timeout to 20 seconds
     await page.locator("#email").fill(process.env.EMAIL);
 
     console.log("Waiting for password input to be visible...");
     await page.waitForSelector("#password", { visible: true, timeout: 60000 }); // Increase timeout to 20 seconds
     await page.locator("#password").fill(process.env.PASSWORD);
-
-    console.log("Taking screenshot after filling email and password...");
-    await page.screenshot({ path: "after_filling_email_and_password.png" });
 
     console.log("Submitting login form...");
     await page.waitForSelector('#login-form button[type="submit"]', {
@@ -58,9 +52,6 @@ const login = async (page) => {
     console.log("Waiting for login to complete...");
   } catch (error) {
     console.error("Error during login:", error);
-    const screenshotPath = "error_screenshot.png";
-    await page.screenshot({ path: screenshotPath });
-    console.log(`Screenshot of the error saved at ${screenshotPath}`);
   }
 };
 
