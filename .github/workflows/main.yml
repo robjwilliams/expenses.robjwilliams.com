@@ -2,6 +2,8 @@ name: Scrape and Upload
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 14,19,21,2 * * *"
 
 jobs:
   carrefour-bot:
