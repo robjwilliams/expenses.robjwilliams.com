@@ -1,36 +1,26 @@
+import { Footer } from "@/components/ui/footer";
 import AuthButton from "../components/AuthButton";
-import { createClient } from "@/utils/supabase/server";
+import { MacBook } from "./MacBook";
+import { ShootingStarsAndStarsBackgroundDemo } from "./ShootingStarsDemo";
+import { StoryDemo } from "./StoryDemo";
 
 export default async function Index() {
-  const canInitSupabaseClient = () => {
-    // This function is just for the interactive tutorial.
-    // Feel free to remove it once you have Supabase connected.
-    try {
-      createClient();
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-
-  const isSupabaseConnected = canInitSupabaseClient();
-
   return (
-    <div className="flex-1 w-full flex flex-col gap-20 items-center  h-screen">
-      <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-        <div className="w-full flex justify-between items-right p-3 text-sm">
-          {isSupabaseConnected && <AuthButton />}
+    <div className="flex-1 w-full flex flex-col items-center h-screen text-gray-400">
+      <nav className="w-full flex felx-row items-center h-16">
+        <div className="w-full flex justify-end p-3 mr-6 text-md font-semibold uppercase">
+          <AuthButton />
         </div>
       </nav>
+      <ShootingStarsAndStarsBackgroundDemo />
 
-      <div className="flex-1 flex flex-col gap-20 max-w-4xl px-3 ">
-        <main className="flex-1 flex flex-col gap-6">
-          <h2 className="font-bold text-4xl mb-4">Expenses App</h2>
-        </main>
-      </div>
+      <main className="flex flex-col w-full px-40 pt-16">
+        <MacBook />
+        <StoryDemo />
+      </main>
 
-      <footer className="w-full border-t border-t-foreground/10 p-8 flex justify-center text-center text-xs">
-        <p>Powered by robjwilliams</p>
+      <footer className="w-full text-xs">
+        <Footer />
       </footer>
     </div>
   );

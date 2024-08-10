@@ -47,13 +47,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="scroll-smooth">
       <body
         className={`${inter.className} overflow-y-scroll scroll-auto antialiased selection:bg-indigo-100 selection:text-indigo-700 dark:bg-gray-950`}
         suppressHydrationWarning
       >
         <div className="max-w-screen">
-          <ThemeProvider defaultTheme="system" attribute="class">
+          <ThemeProvider defaultTheme="dark" attribute="class">
             <main className="flex items-center h-screen">{children}</main>
           </ThemeProvider>
         </div>
