@@ -40,3 +40,34 @@ export const getPurchaseSummary = cache(
     return data;
   }
 );
+
+export const createPurchase = async (
+  supabase: SupabaseClient,
+  purchase: any
+) => {
+  const { data, error } = await supabase
+    .from("purchase")
+    .upsert([purchase])
+    .select("id");
+
+  if (error) {
+    console.error("Error creating purchase:", error);
+  }
+
+  return { data, error };
+};
+
+export const createPurchaseItems = async (
+  supabase: SupabaseClient,
+  purchaseItems: any
+) => {
+  const { data, error } = await supabase
+    .from("purchase_item")
+    .upsert(purchaseItems);
+
+  if (error) {
+    console.error("Error creating purchase:", error);
+  }
+
+  return { data, error };
+};

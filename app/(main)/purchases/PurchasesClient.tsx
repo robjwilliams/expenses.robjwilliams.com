@@ -3,6 +3,8 @@ import { Table } from "./components/Table";
 import { useEffect, useState } from "react";
 import { DateRange } from "react-day-picker";
 import { DateRangePicker } from "@/components/DatePicker";
+import { Button } from "@/components/Button";
+import Link from "next/link";
 
 export type Purchase = {
   id: string;
@@ -36,13 +38,16 @@ export default function PurchasesClient({ purchases }: Props) {
   return (
     <>
       <div className="my-10 sm:mt-6 lg:mt-10">
-        <div className="flex flex-col items-right gap-y-4">
+        <div className="flex flex-row items-right gap-y-4 justify-between">
           <DateRangePicker
             enableYearNavigation
             value={dateRange}
             onChange={setDateRange}
             className="w-60"
           />
+          <Link href="/purchases/new">
+            <Button>New Purchase</Button>
+          </Link>
         </div>
         <div className="my-10 flex w-full flex-col items-center justify-center">
           <Table purchases={filteredPurchases} />
