@@ -145,13 +145,15 @@ async function processReceipts() {
       console.error(err);
     }
   }
-  console.log(JSON.stringify(body, null, 2));
-  const { data, error } = await axios.post(
-    `${process.env.API_ENDPOINT}/receipts`,
-    body,
-    { timeout: 30000 }
-  );
-  console.log(data, error);
+
+  if (body.length > 0) {
+    const { data, error } = await axios.post(
+      `${process.env.API_ENDPOINT}/receipts`,
+      body,
+      { timeout: 30000 }
+    );
+    console.log(data, error);
+  }
 }
 
 processReceipts();
