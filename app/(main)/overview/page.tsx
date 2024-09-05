@@ -1,7 +1,17 @@
-import { getPurchaseSummary } from "@/supabase/queries";
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
+import { Metadata } from "next";
 import OverviewClient from "./OverviewClient";
+import {
+  getCategoryBreakdown,
+  getPurchaseSummary,
+  getSpendingByDay,
+  getTotalAmountSpent,
+} from "@/supabase/queries";
+import { createClient } from "@/utils/supabase/server";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Example dashboard app built using the components.",
+};
 
 function getCurrentMonthDateRange() {
   const now = new Date();
@@ -13,27 +23,29 @@ function getCurrentMonthDateRange() {
   };
 }
 
-export default async function Overview() {
+export default async function DashboardPage() {
   const supabase = createClient();
-  const { from, to } = getCurrentMonthDateRange();
-  const [summary] = await Promise.all([getPurchaseSummary(supabase, from, to)]);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return redirect("/login");
-  }
+  const initialDate = getCurrentMonthDateRange();
+  const { from, to } = initialDate;
+  const date = {
+    from: new Date(from),
+    to: new Date(to),
+  };
+  const [summary, total, categoryBreakdown, spendingByDay] = await Promise.all([
+    getPurchaseSummary(supabase, initialDate.from, initialDate.to),
+    getTotalAmountSpent(supabase, initialDate.from, initialDate.to),
+    getCategoryBreakdown(supabase, initialDate.from, initialDate.to),
+    getSpendingByDay(supabase, initialDate.from, initialDate.to),
+  ]);
 
   return (
     <>
-      <h1 className="text-lg font-semibold text-gray-900 sm:text-xl dark:text-gray-50">
-        Overview
-      </h1>
       <OverviewClient
-        summary={summary}
-        initialDateRange={{ from: new Date(from), to: new Date(to) }}
+        initialDate={date}
+        initialSummary={summary}
+        initialTotal={total}
+        initialCategoryBreakdown={categoryBreakdown}
+        initialSpendingByDay={spendingByDay}
       />
     </>
   );

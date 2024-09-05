@@ -40,6 +40,55 @@ export const getPurchaseSummary = cache(
     return data;
   }
 );
+export const getTotalAmountSpent = cache(
+  async (supabase: SupabaseClient, startDate: string, endDate: string) => {
+    const { data, error } = await supabase.rpc("get_total_amount_spent", {
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    if (error) {
+      console.error("Error fetching purchase overview:", error);
+      return null;
+    }
+    const total = data[0].total_spent ? data[0].total_spent : 0;
+
+    return total;
+  }
+);
+
+export const getCategoryBreakdown = cache(
+  async (supabase: SupabaseClient, startDate: string, endDate: string) => {
+    const { data, error } = await supabase.rpc("get_category_breakdown", {
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    if (error) {
+      console.error("Error fetching purchase overview:", error);
+      return null;
+    }
+    const category = data ? data : [];
+
+    return category;
+  }
+);
+
+export const getSpendingByDay = cache(
+  async (supabase: SupabaseClient, startDate: string, endDate: string) => {
+    const { data, error } = await supabase.rpc("get_spending_by_day_of_week", {
+      start_date: startDate,
+      end_date: endDate,
+    });
+
+    if (error) {
+      console.error("Error fetching purchase overview:", error);
+      return null;
+    }
+
+    return data;
+  }
+);
 
 export const createPurchase = async (
   supabase: SupabaseClient,

@@ -1,8 +1,67 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/utils/supabase/middleware";
+import { type NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { updateSession } from "@/utils/supabase/middleware"; // Adjust import path if needed
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          );
+          response = NextResponse.next({
+            request,
+          });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Check if the user is authenticated
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  // Define public paths
+  const publicPaths = ["/login", "/"];
+
+  // Determine if the request path is public
+  const isPublicPath = publicPaths.some((path) => {
+    // Ensure to match the path correctly
+    return (
+      request.nextUrl.pathname === path ||
+      request.nextUrl.pathname.startsWith(path + "/")
+    );
+  });
+
+  // If the request path is public, allow it
+  if (isPublicPath) {
+    return response;
+  }
+
+  // Redirect to login if the user is not authenticated
+  if (!session) {
+    const url = new URL("/login", request.url);
+    return NextResponse.redirect(url);
+  }
+
+  // Proceed if the user is authenticated
+  return response;
 }
 
 export const config = {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { siteConfig } from "@/config/site";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -9,10 +10,10 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
-import { siteConfig } from "./siteConfig";
+// import { siteConfig } from "./siteConfig";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://yoururl.com"),
+  metadataBase: new URL("https://expense.robjwilliams.com"),
   title: siteConfig.name,
   description: siteConfig.description,
   keywords: [],
@@ -53,8 +54,8 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         <div className="max-w-screen">
-          <ThemeProvider defaultTheme="dark" attribute="class">
-            <main className="flex items-center h-screen">{children}</main>
+          <ThemeProvider defaultTheme="light" attribute="class">
+            <main>{children}</main>
           </ThemeProvider>
         </div>
       </body>
