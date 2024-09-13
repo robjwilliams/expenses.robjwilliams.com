@@ -8,7 +8,8 @@ const downloadDir = path.join(os.tmpdir());
 
 const startBrowser = async () => {
   const browser = await puppeteer.launch({
-    headless: "new",
+    // headless: "new",
+    headless: false,
     args: ["--no-sandbox"],
   });
   const page = await browser.newPage();
@@ -72,6 +73,7 @@ const fetchLatestPurchaseDate = async () => {
     const {
       data: { date },
     } = await axios.get(`${process.env.API_ENDPOINT}/latest_purchase`);
+    console.log(date);
     const dateObject = new Date(date);
 
     const pad = (num) => num.toString().padStart(2, "0");
@@ -104,7 +106,7 @@ const processBillingItems = async (page, downloadDir) => {
   const gtTimestamp = latestPurchaseDate
     ? toUnixTimestamp(latestPurchaseDate)
     : null;
-  console.log("gtTimestamp:", gtTimestamp);
+  console.log("gtTimestamp:", gtTimestamp, latestPurchaseDate);
 
   const tmpDir = path.join(os.tmpdir(), "tmp");
   if (!fs.existsSync(tmpDir)) {
@@ -170,36 +172,41 @@ const processBillingItems = async (page, downloadDir) => {
     if (button) {
       await button.click();
       await page.waitForSelector("#simplemodal-container", { visible: true });
-      await page.waitForSelector(
-        "#simplemodal-container .download-container button",
-        { visible: true }
-      );
-
-      const downloadButton = await page.$(".download-container button");
-      if (downloadButton) {
-        console.log("Download button found, clicking...");
-        await downloadButton.click();
+      try {
+        await page.waitForSelector(
+          "#simplemodal-container .download-container button",
+          { visible: true, timeout: 5000 }
+        );
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        const files = fs
-          .readdirSync(downloadDir)
-          .filter((file) => file.endsWith(".pdf"));
-        if (files.length) {
-          const latestFile = files.reduce((prev, curr) => {
-            const prevTime = fs.statSync(path.join(downloadDir, prev)).ctime;
-            const currTime = fs.statSync(path.join(downloadDir, curr)).ctime;
-            return currTime > prevTime ? curr : prev;
-          });
+        const downloadButton = await page.$(".download-container button");
+        if (downloadButton) {
+          console.log("Download button found, clicking...");
+          await downloadButton.click();
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
-          const oldPath = path.join(downloadDir, latestFile);
-          const newPath = path.join(tmpDir, newFileName);
-          fs.renameSync(oldPath, newPath);
-          console.log("Renamed file:", latestFile, "to", newFileName);
+          const files = fs
+            .readdirSync(downloadDir)
+            .filter((file) => file.endsWith(".pdf"));
+          if (files.length) {
+            const latestFile = files.reduce((prev, curr) => {
+              const prevTime = fs.statSync(path.join(downloadDir, prev)).ctime;
+              const currTime = fs.statSync(path.join(downloadDir, curr)).ctime;
+              return currTime > prevTime ? curr : prev;
+            });
+
+            const oldPath = path.join(downloadDir, latestFile);
+            const newPath = path.join(tmpDir, newFileName);
+            fs.renameSync(oldPath, newPath);
+            console.log("Renamed file:", latestFile, "to", newFileName);
+          } else {
+            console.log("No PDF files found in download directory.");
+          }
         } else {
-          console.log("No PDF files found in download directory.");
+          console.log("Download button not found.");
         }
-      } else {
-        console.log("Download button not found.");
+      } catch (e) {
+        console.log(e);
       }
 
       await page.keyboard.press("Escape");
