@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { updateSession } from "@/utils/supabase/middleware"; // Adjust import path if needed
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -38,7 +37,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getSession();
 
   // Define public paths
-  const publicPaths = ["/login", "/"];
+  const publicPaths = ["/login", "/", "/api/latest_purchase"];
 
   // Determine if the request path is public
   const isPublicPath = publicPaths.some((path) => {
